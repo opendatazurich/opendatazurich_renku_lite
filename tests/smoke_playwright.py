@@ -34,6 +34,8 @@ DATASETS = [
     ),
 ]
 RUN_TIMEOUT_S = 600
+PRELOADED_WHEEL = "/pypi/opendata_lite-1.0.0-py3-none-any.whl"
+PYPI_HOSTS = r"^https://(pypi\.org|files\.pythonhosted\.org)/"
 ERROR_PATTERN = re.compile(
     r"Traceback \(most recent call last\)|^\w*(Error|Exception):", re.MULTILINE
 )
@@ -61,6 +63,8 @@ async def wait_until_done(page: Page) -> None:
 
 async def smoke(browser, base: str, label: str, package_id: str, resource_id: str | None) -> list:
     context = await browser.new_context()  # fresh browser storage per dataset
+    requests = []
+    context.on("request", lambda request: requests.append(request.url))
     page = await context.new_page()
     query = f"package_id={package_id}" + (f"&resource_id={resource_id}" if resource_id else "")
     started = time.monotonic()
@@ -81,11 +85,14 @@ async def smoke(browser, base: str, label: str, package_id: str, resource_id: st
         outputs = await page.locator(".jp-OutputArea-output").all_inner_texts()
         errors = [o for o in outputs if ERROR_PATTERN.search(o)]
         problems += [f"error output:\n{e[-1500:]}" for e in errors]
-        versions = next((o for o in outputs if o.startswith("Python ")), "")
-        if not re.search(r"pandas 3\.", versions):
-            problems.append(f"expected pandas 3.x, setup printed {versions!r}")
+        # The helper and pure-Python wheels are preloaded from the site, never from PyPI.
+        if not any(url.endswith(PRELOADED_WHEEL) for url in requests):
+            problems.append(f"{PRELOADED_WHEEL} was not preloaded")
+        pypi = [url for url in requests if re.search(PYPI_HOSTS, url)]
+        if pypi:
+            problems.append(f"requests to PyPI: {pypi}")
         images = await page.locator(".jp-OutputArea-output img").count()
-        print(f"  {versions.strip()} | {len(prompts)} code cells | {images} plots")
+        print(f"  {len(prompts)} code cells | {images} plots")
     except Exception as error:  # noqa: BLE001 - report and continue with the next dataset
         problems.append(f"{type(error).__name__}: {error}")
         await page.screenshot(path=f"smoke-{package_id}.png", full_page=True)

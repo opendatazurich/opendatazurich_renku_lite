@@ -79,7 +79,7 @@ async def ensure_package(module: str, package: str | None = None) -> None:
     Pyodide only auto-loads packages imported directly in a notebook cell, not
     ones imported inside this module, so geopandas is installed lazily from the
     Pyodide distribution. Not usable for pyarrow: pandas detects pyarrow once at
-    import time, so the notebook must import pyarrow before pandas.
+    import time, so pyarrow is preloaded with the kernel (see jupyter-lite.json).
     """
     import importlib.util
 

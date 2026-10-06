@@ -18,6 +18,10 @@ expect 302 "root redirects to lab" "$BASE/?package_id=x"
 expect 200 "lab" "$BASE/lab/index.html"
 expect 200 "template listing" "$BASE/api/contents/templates/all.json"
 expect 200 "piplite index" "$BASE/pypi/all.json"
+# Wheels preloaded by the kernel (jupyter-lite.json) must exist under these exact names.
+for wheel in $(curl -s "$BASE/jupyter-lite.json" | grep -o '"/pypi/[^"]*\.whl"' | tr -d '"'); do
+  expect 200 "preloaded wheel $wheel" "$BASE$wheel"
+done
 # Datopian rejects any Origin; the proxy must strip it and follow 3 redirects.
 expect 200 "csv download via proxy (with Origin)" -H "Origin: https://example.org" "$BASE$DL.csv"
 expect 200 "parquet download via proxy" "$BASE$DL.parquet"

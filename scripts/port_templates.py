@@ -3,7 +3,7 @@ Regenerate content/templates/Template{Csv,Geo}.ipynb from the Renku session temp
 https://github.com/opendatazurich/opendatazurich_renku/tree/main/templates
 
 The Lite templates are the Renku ones with network calls awaited, the helper
-imported from opendata_lite (installed via piplite), the papermill
+imported from opendata_lite (preloaded with the kernel, see jupyter-lite.json), the papermill
 ``stop-execution`` tag dropped, and a closing cell pointing to Renku sessions.
 Every rewrite must match exactly once, so upstream changes fail loudly here
 instead of silently producing a broken notebook.
@@ -25,20 +25,10 @@ INTRO = """\
 # OpenDataZurich starter notebook
 
 This notebook runs **entirely in your browser** (JupyterLite with a Pyodide Python kernel): \
-nothing is installed and your changes are stored only in this browser. \
+pandas, matplotlib, seaborn, missingno and the OpenDataZurich helper are preloaded \
+when the kernel starts, and your changes are stored only in this browser. \
 Run the cells from top to bottom with <kbd>Shift</kbd>+<kbd>Enter</kbd>, \
 or use *Run → Run All Cells*."""
-
-SETUP = """\
-# Install the OpenDataZurich helper and missingno into the in-browser Python
-import sys
-
-import pyarrow  # load before pandas, so pandas can use it (parquet files, fast strings)
-import pandas as pd
-import piplite
-
-await piplite.install(["opendata-lite", "missingno"])
-print(f"Python {sys.version.split()[0]}, pandas {pd.__version__} (Pyodide, in your browser)")"""
 
 OUTRO = """\
 ## Need more power, or R?
@@ -116,7 +106,7 @@ def port(nb: dict, rewrites: list[tuple[str, str]]) -> dict:
     if not any("parameters" in c["metadata"].get("tags", []) for c in cells):
         raise SystemExit("template has no cell tagged 'parameters'")
 
-    nb["cells"] = [markdown("lite-intro", INTRO), code("lite-setup", SETUP), *cells]
+    nb["cells"] = [markdown("lite-intro", INTRO), *cells]
     nb["cells"].append(markdown("lite-renku", OUTRO))
     nb["metadata"] = {
         "kernelspec": {"display_name": "Python (Pyodide)", "language": "python", "name": "python"},
