@@ -1,0 +1,11 @@
+{
+  "LiteBuildConfig": {
+    "contents": ["content"],
+    "output_dir": "_output",
+    "apps": ["lab"],
+    "no_sourcemaps": true
+  },
+  "PipliteAddon": {
+    "piplite_urls": ["wheels"]
+  }
+}

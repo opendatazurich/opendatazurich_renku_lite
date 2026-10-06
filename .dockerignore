@@ -1,0 +1,8 @@
+.git
+.venv
+**/node_modules
+**/lib
+**/odz_launcher/labextension
+**/__pycache__
+_output
+tests

@@ -1,0 +1,29 @@
+# Dev/test environment only; the site itself is built in the Dockerfile.
+[project]
+name = "opendatazurich-renku-lite-dev"
+version = "0"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pandas>=3",
+    "pyarrow",
+    "geopandas>=1.1",
+    "ipython",
+    "playwright>=1.48",
+    "ruff",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["opendata_lite/src"]
+addopts = "--ignore=tests/smoke_playwright.py"
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["content"]

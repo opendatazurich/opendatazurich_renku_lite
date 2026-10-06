@@ -1,0 +1,66 @@
+# Rendered by the nginx image entrypoint (envsubst) to /etc/nginx/conf.d/default.conf.
+# Only ${NGINX_*} environment variables are substituted; nginx $variables are untouched.
+
+# Path (still URL-encoded) of a proxied download, e.g.
+#   /proxy/data.stadt-zuerich.ch/dataset/x/download/x.csv -> /dataset/x/download/x.csv
+# Only data.stadt-zuerich.ch downloads are proxied; anything else gets 403 below.
+map $request_uri $odz_download_path {
+    "~^/proxy/data\.stadt-zuerich\.ch(?<path>/dataset/[^?]*/download/[^?]*)" $path;
+    default "";
+}
+
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    absolute_redirect off;
+    server_tokens off;
+
+    location = / {
+        return 302 /lab/index.html$is_args$args;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+        add_header Cache-Control "public, max-age=3600";
+    }
+
+    # Config, contents listings and HTML must not be cached across deploys.
+    location ~ \.(json|html)$ {
+        add_header Cache-Control "no-cache";
+    }
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Same-origin proxy for OGD downloads whose storage backend rejects browser
+    # (cross-origin) requests: the Datopian proxy behind data.stadt-zuerich.ch
+    # answers 403 "Domain not allowed" whenever an Origin header is present.
+    # The request is forwarded without any client headers (no Origin, cookies),
+    # and the redirect chain data.stadt-zuerich.ch -> ckan-prod.zurich.datopian.com
+    # -> proxy-server.datopian.com -> *.r2.cloudflarestorage.com (presigned) is
+    # followed here so the browser only ever sees a same-origin 200.
+    location /proxy/ {
+        limit_except GET {
+            deny all;
+        }
+        if ($odz_download_path = "") {
+            return 403;
+        }
+        proxy_pass https://data.stadt-zuerich.ch$odz_download_path$is_args$args;
+        include /etc/nginx/conf.d/odz-proxy.inc;
+    }
+
+    location @odz_follow_redirect {
+        set $odz_redirect $upstream_http_location;
+        # Redirect targets are allowlisted too, so this is never an open proxy.
+        if ($odz_redirect !~ "^https://(data\.stadt-zuerich\.ch|ckan-prod\.zurich\.datopian\.com|proxy-server\.datopian\.com|[0-9a-f]+\.eu\.r2\.cloudflarestorage\.com)/") {
+            return 502;
+        }
+        proxy_pass $odz_redirect;
+        include /etc/nginx/conf.d/odz-proxy.inc;
+    }
+}

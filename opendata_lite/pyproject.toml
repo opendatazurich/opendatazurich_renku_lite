@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opendata-lite"
+version = "1.0.0"
+description = "OpenDataZurich helpers for JupyterLite (Pyodide): CKAN metadata, tabular and WFS data via the browser"
+requires-python = ">=3.11"
+license = "MIT"
+# Resolved from the Pyodide distribution. geopandas is loaded lazily on first
+# use (see ensure_package); pyarrow is imported by the notebook setup cell.
+dependencies = ["numpy", "pandas"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/opendata_lite"]

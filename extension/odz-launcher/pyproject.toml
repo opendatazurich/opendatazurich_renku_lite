@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.5", "jupyter-builder>=1.2.0,<2", "hatch-jupyter-builder>=0.9"]
+build-backend = "hatchling.build"
+
+[project]
+name = "odz-launcher"
+version = "1.0.0"
+description = "JupyterLite plugin: open an OpenDataZurich starter notebook from URL parameters"
+license = "MIT"
+requires-python = ">=3.10"
+
+[tool.hatch.build.targets.wheel.shared-data]
+"odz_launcher/labextension" = "share/jupyter/labextensions/odz-launcher"
+
+[tool.hatch.build.hooks.jupyter-builder]
+dependencies = ["hatch-jupyter-builder>=0.9"]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = ["odz_launcher/labextension/package.json"]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+build_cmd = "build"
+npm = ["jlpm"]
