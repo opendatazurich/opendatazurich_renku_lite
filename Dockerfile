@@ -40,6 +40,23 @@ FROM nginxinc/nginx-unprivileged:1.29-alpine
 # Lets the entrypoint render ${NGINX_LOCAL_RESOLVERS} from /etc/resolv.conf
 # (cluster DNS on Kubernetes) for the /proxy/ upstreams.
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
+
+# Add .mjs to the javascript entry in mime.types. The nginx-alpine base image
+# ships mime.types without it, so pyodide.mjs would otherwise be served as
+# application/octet-stream and the browser would refuse to load it as an ES
+# module (strict MIME-type checking for module scripts). The regex tolerates
+# either `application/javascript` or `text/javascript` and tab/space separators;
+# `grep -q` makes the build fail loudly if the pattern no longer matches.
+USER root
+RUN sed -i -E 's|((application|text)/javascript[[:space:]]+)js;|\1js mjs;|' /etc/nginx/mime.types \
+ && grep -Eq '(application|text)/javascript[[:space:]]+js mjs;' /etc/nginx/mime.types
+USER 101
+
 COPY nginx/templates/ /etc/nginx/templates/
 COPY --from=build /site /usr/share/nginx/html
+
+# Marker file to verify at runtime that this image (and not a stale cached one)
+# is the one actually running behind the Renku launcher. Harmless to ship.
+RUN echo "mjs-mime-fix-active" > /usr/share/nginx/html/_build_marker.txt
+
 EXPOSE 8080
