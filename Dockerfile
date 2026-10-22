@@ -48,7 +48,9 @@ ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 # either `application/javascript` or `text/javascript` and tab/space separators;
 # `grep -q` makes the build fail loudly if the pattern no longer matches.
 USER root
-RUN sed -i -E 's|((application|text)/javascript[[:space:]]+)js;|\1js mjs;|' /etc/nginx/mime.types \
+# BusyBox sed in Alpine parses `|` inside an s||| expression as a separator,
+# so the alternation (application|text) must live inside a different delimiter.
+RUN sed -i -E 's#((application|text)/javascript[[:space:]]+)js;#\1js mjs;#' /etc/nginx/mime.types \
  && grep -Eq '(application|text)/javascript[[:space:]]+js mjs;' /etc/nginx/mime.types
 USER 101
 
